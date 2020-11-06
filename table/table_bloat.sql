@@ -1,20 +1,20 @@
 /* WARNING: executed with a non-superuser role, the query inspect only tables and materialized view (9.3+) you are granted to read.
 * This query is compatible with PostgreSQL 9.0 and more
 */
-SELECT current_database(), schemaname, tblname, bs*tblpages AS real_size,
+SELECT current_database(), schemaname, tblname, bs*tblpages AS realsize_byte,est_tblpages,est_tblpages_ff,
   (tblpages-est_tblpages)*bs AS extra_size,
   CASE WHEN tblpages - est_tblpages > 0
     THEN 100 * (tblpages - est_tblpages)/tblpages::float
     ELSE 0
-  END AS extra_ratio, fillfactor,
+  END AS extra_pages_pct, fillfactor,
   CASE WHEN tblpages - est_tblpages_ff > 0
     THEN (tblpages-est_tblpages_ff)*bs
     ELSE 0
-  END AS bloat_size,
+  END AS bloatsize_byte,
   CASE WHEN tblpages - est_tblpages_ff > 0
     THEN 100 * (tblpages - est_tblpages_ff)/tblpages::float
     ELSE 0
-  END AS bloat_ratio, is_na
+  END AS bloat_pct, is_na
   -- , tpl_hdr_size, tpl_data_size, (pst).free_percent + (pst).dead_tuple_percent AS real_frag -- (DEBUG INFO)
 FROM (
   SELECT ceil( reltuples / ( (bs-page_hdr)/tpl_size ) ) + ceil( toasttuples / 4 ) AS est_tblpages,
