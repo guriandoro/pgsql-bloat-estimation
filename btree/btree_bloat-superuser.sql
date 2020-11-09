@@ -3,16 +3,16 @@
 -- This query run much faster than btree_bloat.sql, about 1000x faster.
 --
 -- This query is compatible with PostgreSQL 8.2 and after.
-SELECT current_database(), nspname AS schemaname, tblname, idxname, bs*(relpages)::bigint AS real_size,
-  bs*(relpages-est_pages)::bigint AS extra_size,
-  100 * (relpages-est_pages)::float / relpages AS extra_ratio,
+SELECT current_database(), nspname AS schemaname, tblname, idxname, bs*(relpages)::bigint AS size_bytes,
+  bs*(relpages-est_pages)::bigint AS free_bytes,
+  100 * (relpages-est_pages)::float / relpages AS free_pct,
   fillfactor,
   CASE WHEN relpages > est_pages_ff
     THEN bs*(relpages-est_pages_ff)
     ELSE 0
-  END AS bloat_size,
-  100 * (relpages-est_pages_ff)::float / relpages AS bloat_ratio,
-  is_na
+  END AS bloat_bytes,
+  100 * (relpages-est_pages_ff)::float / relpages AS bloat_pct,
+  is_na as stats_missing
   -- , 100-(pst).avg_leaf_density AS pst_avg_bloat, est_pages, index_tuple_hdr_bm, maxalign, pagehdr, nulldatawidth, nulldatahdrwidth, reltuples, relpages -- (DEBUG INFO)
 FROM (
   SELECT coalesce(1 +
@@ -82,7 +82,9 @@ FROM (
           JOIN pg_statistic s ON s.starelid = i.att_rel
                              AND s.staattnum = i.att_pos
           JOIN pg_class ct ON ct.oid = i.tbloid
+             -- AND ct.relname IN ('pgbench_accounts','pgbench_branches','pgbench_tellers')
           JOIN pg_namespace n ON ct.relnamespace = n.oid
+              AND n.nspname NOT IN ('pg_catalog')
           GROUP BY 1,2,3,4,5,6,7,8,9,10
       ) AS rows_data_stats
   ) AS rows_hdr_pdg_stats
