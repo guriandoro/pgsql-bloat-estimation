@@ -20,7 +20,7 @@ ToC:
 * [Bloat in Tables](#bloat-in-tables)
 * [Bloat in btree indexes](#bloat-in-btree-indexes)
 * [Caveats](#caveats)
-  * [The ``is_na`` column](#the-is_na-column)
+  * [The ``stats_missing`` column](#the-stats_missing-column)
   * [Toasted fields](#toasted-fields)
   * [Alignment padding](#alignment-padding)
   * [Size of tables/indexes](#size-of-tablesindexes)
@@ -42,7 +42,7 @@ these fields:
 * ``bloat_size``: estimated size of the bloat without the extra space kept
   for the fillfactor.
 * ``bloat_ratio``: estimated ratio of the real size used by ``bloat_size``.
-* ``is_na``: is the estimation "Not Applicable" ? If true, do not trust the
+* ``stats_missing``: is the estimation "Not Applicable" ? If true, do not trust the
   stats.
 
 AS 7.4, 8.0 and 8.1 do not have fillfactor, ``extra_size``, ``extra_ratio``
@@ -67,7 +67,7 @@ expose these fields:
 * ``bloat_size``: estimated size of the bloat without the extra space kept
   for the fillfactor.
 * ``bloat_ratio``: estimated ratio of the real size used by ``bloat_size``.
-* ``is_na``: is the estimation "Not Applicable" ? If true, do not trust the
+* ``stats_missing``: is the estimation "Not Applicable" ? If true, do not trust the
   stats.
 
 The query in file `btree_bloat-superuser.sql` is much faster than other one.
@@ -75,7 +75,7 @@ However, it must be executed by a superuser role only.
 
 ## Caveats
 
-### The ``is_na`` column
+### The ``stats_missing`` column
 
 This field allows you to filter out statistics considered wrong by the query
 itself. Just uncomment the ``WHERE`` clause.
@@ -105,7 +105,7 @@ do not consider if the value is a toast pointer or a real value.
 Because of this, statistics on variable length fields might be largely
 underestimated, even leading to negative bloat for some tables.
 
-There's no way to include such situation in the existing ``is_na`` column.
+There's no way to include such situation in the existing ``stats_missing`` column.
 
 ### Alignment padding
 
