@@ -1,8 +1,8 @@
 /* WARNING: executed with a non-superuser role, the query inspect only tables and materialized view (9.3+) you are granted to read.
 * This query is compatible with PostgreSQL 9.0 and more
 */
-SELECT current_database(), schemaname, tblname, bs*tblpages AS realsize_byte,est_tblpages,est_tblpages_ff,
-  (tblpages-est_tblpages)*bs AS extra_size,
+SELECT current_database(), schemaname, tblname, tblpages as pages,est_tblpages as est_pages ,est_tblpages_ff as est_pages_ff,
+  bs*tblpages AS cur_size_byte, (tblpages-est_tblpages)*bs AS free_bytes,
   CASE WHEN tblpages - est_tblpages > 0
     THEN 100 * (tblpages - est_tblpages)/tblpages::float
     ELSE 0
@@ -14,7 +14,7 @@ SELECT current_database(), schemaname, tblname, bs*tblpages AS realsize_byte,est
   CASE WHEN tblpages - est_tblpages_ff > 0
     THEN 100 * (tblpages - est_tblpages_ff)/tblpages::float
     ELSE 0
-  END AS bloat_pct, is_na
+  END AS bloat_pct, is_na AS stats_missing
   -- , tpl_hdr_size, tpl_data_size, (pst).free_percent + (pst).dead_tuple_percent AS real_frag -- (DEBUG INFO)
 FROM (
   SELECT ceil( reltuples / ( (bs-page_hdr)/tpl_size ) ) + ceil( toasttuples / 4 ) AS est_tblpages,
@@ -47,17 +47,19 @@ FROM (
           OR sum(CASE WHEN att.attnum > 0 THEN 1 ELSE 0 END) <> count(s.attname) AS is_na
       FROM pg_attribute AS att
         JOIN pg_class AS tbl ON att.attrelid = tbl.oid
-        JOIN pg_namespace AS ns ON ns.oid = tbl.relnamespace
+        JOIN pg_namespace AS ns ON ns.oid = tbl.relnamespace 
+            AND ns.nspname NOT IN ('pg_catalog', 'information_schema')
         LEFT JOIN pg_stats AS s ON s.schemaname=ns.nspname
           AND s.tablename = tbl.relname AND s.inherited=false AND s.attname=att.attname
         LEFT JOIN pg_class AS toast ON tbl.reltoastrelid = toast.oid
       WHERE NOT att.attisdropped
         AND tbl.relkind in ('r','m')
+        --AND tbl.relname IN ('pgbench_accounts','test2')
       GROUP BY 1,2,3,4,5,6,7,8,9,10
       ORDER BY 2,3
     ) AS s
   ) AS s2
 ) AS s3
--- WHERE NOT is_na
---   AND tblpages*((pst).free_percent + (pst).dead_tuple_percent)::float4/100 >= 1
+--WHERE NOT is_na
+--  AND tblpages*((pst).free_percent + (pst).dead_tuple_percent)::float4/100 >= 1
 ORDER BY schemaname, tblname;
